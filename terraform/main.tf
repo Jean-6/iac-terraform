@@ -21,7 +21,7 @@ resource "aws_ecs_cluster" "cluster" { # Cluster AWS ECR in which fargate contai
 # IAM role for task execution (Fargate needs this)
 resource "aws_iam_role" "ecs_task_execution" { # ECS needs a rule to retrieve image into ECR, describe logs into CloudWatch, and execute task
   name = "${var.app_name}-ecs-task-execution-role"
-  assume_role_policy = "data.aws_iam_policy_document.ecs_task_assume_role.json"
+  assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role.json
 }
 
 data "aws_iam_policy_document" "ecs_task_assume_role" {
@@ -45,12 +45,12 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_attachment" {
 resource "aws_security_group" "ecs_sg" { # Authorize traffic from LB to container
   name        = "${var.app_name}-sg"
   description = "Allow HTTP to ECS tasks"
-  vpc_id      = var.vpc_id
+  vpc_id = aws_vpc.main.id
 
   ingress {
     description = "HTTP from ALB"
-    from_port   = 8080
-    to_port     = 8080
+    from_port   = 8082
+    to_port     = 8082
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"] # if public service, else restrict
 
@@ -66,16 +66,19 @@ resource "aws_security_group" "ecs_sg" { # Authorize traffic from LB to containe
 
 #Application Load Balancer
 resource "aws_lb" "alb" { # Distribute traffic between containers ,
-  name = "${var.app_name}-alb"
+  name = "vegnbio-api-alb"
   internal = false
   load_balancer_type = "application"
-  subnets = var.public_subnet_ids
+  subnets            = [
+    aws_subnet.private_1.id,
+    aws_subnet.private_2.id
+  ]
   security_groups = [aws_security_group.alb_sg.id]
 }
 
 resource "aws_security_group" "alb_sg" { # Authorize public access HTTP and give public DNS to access to app
-  name = "={var.app_name}-alb-sg"
-  vpc_id = var.vpc_id
+  name ="${var.app_name}-alb-sg"
+  vpc_id = aws_vpc.main.id
 
   ingress {
     from_port = 80
@@ -94,10 +97,13 @@ resource "aws_security_group" "alb_sg" { # Authorize public access HTTP and give
 
 # Target group
 resource "aws_lb_target_group" "tg" { # LB send HTTP traffic to TG, TG redirect to Fargate container
-  name = ""
-  port = 8080
+  name = "${var.app_name}-tg"
+  port = 8082
   protocol = "HTTP"
-  vpc_id = var.vpc_id
+  vpc_id = aws_vpc.main.id
+
+  target_type = "ip"
+
   health_check {
     path = "/actuator/health"
     matcher = "200-399"
@@ -125,7 +131,7 @@ resource "aws_ecs_task_definition" "task" { # Define docker container to launch 
   requires_compatibilities = ["FARGATE"]
   cpu = "512"
   memory = "1024"
-  execution_role_arn = aws_iam_role.ecs_task_execution
+  execution_role_arn = aws_iam_role.ecs_task_execution.arn
 
   container_definitions = jsonencode([
     {
@@ -134,8 +140,8 @@ resource "aws_ecs_task_definition" "task" { # Define docker container to launch 
       essential = true
       portMappings = [
         {
-          containerPort = 8080
-          hostPort = 8080
+          containerPort = 8082
+          hostPort = 8082
           protocol = "tcp"
         }
       ]
@@ -153,22 +159,25 @@ resource "aws_ecs_task_definition" "task" { # Define docker container to launch 
 
 # ECS service
 resource "aws_ecs_service" "service" { # create and maintain containers automatically, connexion with LB, auto-scaling possible
-  name = "${var.app_name}-service}"
-  cluster = "aws_ecs_cluster.cluster.id"
+  name = "${var.app_name}-service"
+  cluster = aws_ecs_cluster.cluster.id
   task_definition = aws_ecs_task_definition.task.arn
   desired_count = 1
   launch_type = "FARGATE"
 
   network_configuration {
-    subnets = var.private_subnet_ids
+    subnets = [
+      aws_subnet.private_1.id,
+      aws_subnet.private_2.id
+    ]
     security_groups = [aws_security_group.ecs_sg.id]
     assign_public_ip = false
   }
 
   load_balancer {
     target_group_arn = aws_lb_target_group.tg.arn
-    container_name = "var.app_name"
-    container_port = 8080
+    container_name = "vegnbio-api"
+    container_port = 8082
   }
 
   depends_on = [

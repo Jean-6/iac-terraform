@@ -1,11 +1,4 @@
-# Declare all variables used into project 
-
-
-variable "project" {
-  description = "Project name prefix for all resources"
-  type        = string
-  default     = "vegnbio-api"
-}
+# Declare all variables used into project
 
 variable "aws_region" {
   description = "AWS region where to deploy resources"
@@ -29,9 +22,9 @@ variable "image_tag" {
 }
 
 variable "aws_profile" {
-    description = "AWS CLI Profile to use"
-    type = string
-    default = "default"
+  description = "AWS CLI Profile to use"
+  type = string
+  default = "default"
 }
 
 variable "vpc_cidr" {
