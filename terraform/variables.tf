@@ -1,5 +1,12 @@
 # Declare all variables used into project 
 
+
+variable "project" {
+  description = "Project name prefix for all resources"
+  type        = string
+  default     = "vegnbio-api"
+}
+
 variable "aws_region" {
   description = "AWS region where to deploy resources"
   type = string
