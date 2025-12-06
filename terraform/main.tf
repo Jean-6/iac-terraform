@@ -70,8 +70,8 @@ resource "aws_lb" "alb" { # Distribute traffic between containers ,
   internal = false
   load_balancer_type = "application"
   subnets            = [
-    aws_subnet.private_1.id,
-    aws_subnet.private_2.id
+    aws_subnet.public_1.id,
+    aws_subnet.public_2.id
   ]
   security_groups = [aws_security_group.alb_sg.id]
 }
