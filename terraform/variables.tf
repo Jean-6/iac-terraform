@@ -3,7 +3,7 @@
 variable "aws_region" {
   description = "AWS region where to deploy resources"
   type = string
-  default = "eu-west-1"
+  default = "eu-west-3"
 }
 
 
@@ -45,3 +45,13 @@ variable "public_subnet_ids" {
 variable "private_subnet_ids" {
   type = list(string)
 }
+
+variable "atlas_org_id" {}
+
+variable "atlas_public_key" {}
+
+variable "atlas_private_key" {}
+
+variable "jwt_secret" {}
+
+variable "local_ip" {}

@@ -138,6 +138,26 @@ resource "aws_ecs_task_definition" "task" { # Define docker container to launch 
       name = var.app_name
       image = "${var.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${aws_ecr_repository.app.name}:${var.image_tag}"
       essential = true
+
+      environment = [
+        {
+          name = "SPRING_PROFILES_ACTIVE"
+          value = "prod"
+        },
+        {
+          name = "MONGO_URI"
+          value = mongodbatlas_cluster.cluster.connection_strings[0].standard_srv
+        },
+        {
+          name = "JWT_SECRET"
+          value = var.jwt_secret
+        },
+        {
+          name = "JWT_EXPIRATION"
+          value = "86400000"
+        }
+      ]
+
       portMappings = [
         {
           containerPort = 8082
