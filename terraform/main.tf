@@ -187,11 +187,11 @@ resource "aws_ecs_service" "service" { # create and maintain containers automati
 
   network_configuration {
     subnets = [
-      aws_subnet.private_1.id,
-      aws_subnet.private_2.id
+      aws_subnet.public_1.id,
+      aws_subnet.public_2.id
     ]
     security_groups = [aws_security_group.ecs_sg.id]
-    assign_public_ip = false
+    assign_public_ip = true
   }
 
   load_balancer {
